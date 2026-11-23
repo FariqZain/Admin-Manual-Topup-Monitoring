@@ -1,0 +1,354 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Top-Up Game Panel — MongoDB CRUD</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-slate-950 text-slate-100 min-h-screen p-6">
+  <div class="max-w-6xl mx-auto space-y-8">
+    <header class="border-b border-slate-800 pb-4">
+      <h1 class="text-2xl font-bold text-indigo-400">🎮 Game Top-Up Management (Admin Panel)</h1>
+      <p class="text-sm text-slate-400">Integrasi Node.js, Express, dan MongoDB</p>
+    </header>
+
+    <!-- Toast Notification -->
+    <div id="toast" class="hidden fixed top-6 right-6 z-50 px-5 py-3 rounded-xl text-sm font-medium shadow-lg transition-all"></div>
+
+    <!-- Form Create & Edit -->
+    <section class="bg-slate-900 border border-slate-800 rounded-xl p-6">
+      <h2 id="formTitle" class="text-lg font-semibold mb-4">✨ Buat Pesanan Top-Up Baru</h2>
+      <form id="orderForm" class="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <input type="hidden" id="orderId" />
+
+        <div>
+          <label class="block text-xs text-slate-400 mb-1">Game</label>
+          <select id="gameName" required class="w-full bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500">
+            <option value="Mobile Legends">Mobile Legends</option>
+            <option value="Genshin Impact">Genshin Impact</option>
+            <option value="Honkai: Star Rail">Honkai: Star Rail</option>
+            <option value="Valorant">Valorant</option>
+            <option value="Free Fire">Free Fire</option>
+            <option value="PUBG Mobile">PUBG Mobile</option>
+          </select>
+        </div>
+
+        <div>
+          <label class="block text-xs text-slate-400 mb-1">User ID Game</label>
+          <input id="gameUserId" type="text" required placeholder="Contoh: 123456789"
+            class="w-full bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500" />
+        </div>
+
+        <div>
+          <label class="block text-xs text-slate-400 mb-1">Server / Zone ID <span class="text-slate-500">(Opsional)</span></label>
+          <input id="serverId" type="text" placeholder="Contoh: 2045 atau Asia"
+            class="w-full bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500" />
+        </div>
+
+        <div>
+          <label class="block text-xs text-slate-400 mb-1">Paket Item</label>
+          <input id="itemName" type="text" required placeholder="Contoh: 86 Diamonds"
+            class="w-full bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500" />
+        </div>
+
+        <div>
+          <label class="block text-xs text-slate-400 mb-1">Harga (Rp)</label>
+          <input id="price" type="number" min="1000" required placeholder="Contoh: 22000"
+            class="w-full bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500" />
+        </div>
+
+        <div>
+          <label class="block text-xs text-slate-400 mb-1">Metode Pembayaran</label>
+          <select id="paymentMethod" class="w-full bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500">
+            <option value="QRIS">QRIS</option>
+            <option value="GoPay">GoPay</option>
+            <option value="OVO">OVO</option>
+            <option value="DANA">DANA</option>
+            <option value="Transfer Bank">Transfer Bank</option>
+          </select>
+        </div>
+
+        <div id="statusWrapper" class="hidden">
+          <label class="block text-xs text-slate-400 mb-1">Status Transaksi</label>
+          <select id="status" class="w-full bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500">
+            <option value="PENDING">PENDING</option>
+            <option value="PROCESS">PROCESS</option>
+            <option value="SUCCESS">SUCCESS</option>
+            <option value="FAILED">FAILED</option>
+          </select>
+        </div>
+
+        <div class="md:col-span-3 flex gap-3 pt-2">
+          <button type="submit" id="submitBtn"
+            class="bg-indigo-600 hover:bg-indigo-500 px-5 py-2 rounded-lg text-sm font-medium transition-colors">
+            💾 Simpan Pesanan
+          </button>
+          <button type="button" id="cancelEditBtn" class="hidden bg-slate-700 hover:bg-slate-600 px-4 py-2 rounded-lg text-sm transition-colors">
+            ✕ Batal Edit
+          </button>
+        </div>
+      </form>
+    </section>
+
+    <!-- Stats Cards -->
+    <div id="statsCards" class="grid grid-cols-2 md:grid-cols-4 gap-3"></div>
+
+    <!-- Daftar Transaksi (Read, Quick Update, Delete) -->
+    <section class="bg-slate-900 border border-slate-800 rounded-xl p-6 space-y-4">
+      <div class="flex flex-col md:flex-row md:items-center justify-between gap-3">
+        <h2 class="text-lg font-semibold">📋 Daftar Transaksi</h2>
+        <div class="flex gap-2 flex-wrap">
+          <input id="searchInput" type="text" placeholder="🔍 Cari invoice / User ID..."
+            class="bg-slate-800 border border-slate-700 rounded-lg px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500" />
+          <select id="filterStatus" class="bg-slate-800 border border-slate-700 rounded-lg px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500">
+            <option value="ALL">Semua Status</option>
+            <option value="PENDING">PENDING</option>
+            <option value="PROCESS">PROCESS</option>
+            <option value="SUCCESS">SUCCESS</option>
+            <option value="FAILED">FAILED</option>
+          </select>
+          <button onclick="loadOrders()" class="bg-slate-700 hover:bg-slate-600 px-3 py-1.5 rounded-lg text-sm transition-colors">
+            🔄 Refresh
+          </button>
+        </div>
+      </div>
+
+      <div id="loadingSpinner" class="hidden py-8 text-center text-slate-400 text-sm">
+        <div class="animate-pulse">Memuat data...</div>
+      </div>
+
+      <div class="overflow-x-auto">
+        <table class="w-full text-left text-sm">
+          <thead class="border-b border-slate-800 text-slate-400 text-xs uppercase tracking-wide">
+            <tr>
+              <th class="py-3 px-2">Invoice</th>
+              <th class="py-3 px-2">Game & Akun</th>
+              <th class="py-3 px-2">Item</th>
+              <th class="py-3 px-2">Harga</th>
+              <th class="py-3 px-2">Status</th>
+              <th class="py-3 px-2 text-right">Aksi</th>
+            </tr>
+          </thead>
+          <tbody id="orderTableBody" class="divide-y divide-slate-800"></tbody>
+        </table>
+      </div>
+
+      <div id="totalInfo" class="text-xs text-slate-500 text-right pt-2"></div>
+    </section>
+  </div>
+
+  <script>
+    const API_URL = '/api/orders';
+    const orderForm = document.getElementById('orderForm');
+    const orderTableBody = document.getElementById('orderTableBody');
+    const filterStatus = document.getElementById('filterStatus');
+    const searchInput = document.getElementById('searchInput');
+
+    const statusColors = {
+      PENDING: 'bg-amber-500/20 text-amber-300 border border-amber-500/30',
+      PROCESS: 'bg-sky-500/20 text-sky-300 border border-sky-500/30',
+      SUCCESS: 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/30',
+      FAILED: 'bg-rose-500/20 text-rose-300 border border-rose-500/30',
+    };
+
+    const statsBg = {
+      PENDING: 'bg-amber-500/10 border-amber-500/30 text-amber-300',
+      PROCESS: 'bg-sky-500/10 border-sky-500/30 text-sky-300',
+      SUCCESS: 'bg-emerald-500/10 border-emerald-500/30 text-emerald-300',
+      FAILED: 'bg-rose-500/10 border-rose-500/30 text-rose-300',
+    };
+
+    // Mencegah XSS saat merender teks dari input user
+    const escapeHtml = (str = '') =>
+      String(str).replace(/[&<>"']/g, (m) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[m]));
+
+    // Toast notification
+    function showToast(message, type = 'success') {
+      const toast = document.getElementById('toast');
+      toast.textContent = message;
+      toast.className = `fixed top-6 right-6 z-50 px-5 py-3 rounded-xl text-sm font-medium shadow-lg transition-all ${
+        type === 'success' ? 'bg-emerald-600 text-white' : 'bg-rose-600 text-white'
+      }`;
+      toast.classList.remove('hidden');
+      setTimeout(() => toast.classList.add('hidden'), 3000);
+    }
+
+    // READ: Ambil data pesanan dari backend
+    async function loadOrders() {
+      document.getElementById('loadingSpinner').classList.remove('hidden');
+      orderTableBody.innerHTML = '';
+
+      try {
+        const params = new URLSearchParams();
+        if (filterStatus.value !== 'ALL') params.append('status', filterStatus.value);
+        if (searchInput.value.trim()) params.append('search', searchInput.value.trim());
+
+        const res = await fetch(`${API_URL}?${params.toString()}`);
+        const json = await res.json();
+
+        document.getElementById('loadingSpinner').classList.add('hidden');
+        updateStats(json.data || []);
+
+        if (!json.data || json.data.length === 0) {
+          orderTableBody.innerHTML = '<tr><td colspan="6" class="py-10 text-center text-slate-500">Belum ada transaksi yang cocok.</td></tr>';
+          document.getElementById('totalInfo').textContent = '';
+          return;
+        }
+
+        const totalRevenue = json.data.filter(o => o.status === 'SUCCESS').reduce((s, o) => s + o.price, 0);
+        document.getElementById('totalInfo').textContent =
+          `Menampilkan ${json.count} transaksi · Total sukses: Rp ${totalRevenue.toLocaleString('id-ID')}`;
+
+        orderTableBody.innerHTML = json.data
+          .map((order) => `
+            <tr class="hover:bg-slate-800/50 transition-colors">
+              <td class="py-3 px-2 font-mono text-xs text-slate-300">${escapeHtml(order.invoiceCode)}</td>
+              <td class="py-3 px-2">
+                <div class="font-medium text-slate-200">${escapeHtml(order.gameName)}</div>
+                <div class="text-xs text-slate-400">
+                  ID: ${escapeHtml(order.gameUserId)}${order.serverId ? ` · Srv: ${escapeHtml(order.serverId)}` : ''}
+                </div>
+              </td>
+              <td class="py-3 px-2 text-slate-300">${escapeHtml(order.itemName)}</td>
+              <td class="py-3 px-2">
+                <div class="font-medium">Rp ${Number(order.price).toLocaleString('id-ID')}</div>
+                <div class="text-xs text-slate-400">${escapeHtml(order.paymentMethod)}</div>
+              </td>
+              <td class="py-3 px-2">
+                <span class="px-2.5 py-1 rounded-full text-xs font-medium ${statusColors[order.status] || ''}">
+                  ${escapeHtml(order.status)}
+                </span>
+              </td>
+              <td class="py-3 px-2 text-right space-x-3">
+                <button onclick='startEdit(${JSON.stringify(order).replace(/'/g, "&#39;")})'
+                  class="text-indigo-400 hover:text-indigo-300 text-xs font-medium hover:underline">✏️ Edit</button>
+                <button onclick="deleteOrder('${order._id}')"
+                  class="text-rose-400 hover:text-rose-300 text-xs font-medium hover:underline">🗑️ Hapus</button>
+              </td>
+            </tr>
+          `)
+          .join('');
+      } catch (err) {
+        document.getElementById('loadingSpinner').classList.add('hidden');
+        orderTableBody.innerHTML = '<tr><td colspan="6" class="py-10 text-center text-rose-400">Gagal memuat data. Pastikan server berjalan.</td></tr>';
+      }
+    }
+
+    // Update stats cards
+    function updateStats(orders) {
+      const counts = { PENDING: 0, PROCESS: 0, SUCCESS: 0, FAILED: 0 };
+      orders.forEach(o => { if (counts[o.status] !== undefined) counts[o.status]++; });
+
+      const labels = { PENDING: '⏳ Pending', PROCESS: '⚙️ Proses', SUCCESS: '✅ Sukses', FAILED: '❌ Gagal' };
+      document.getElementById('statsCards').innerHTML = Object.entries(counts).map(([key, val]) => `
+        <div class="rounded-xl border p-4 ${statsBg[key]}">
+          <div class="text-xs mb-1">${labels[key]}</div>
+          <div class="text-2xl font-bold">${val}</div>
+        </div>
+      `).join('');
+    }
+
+    // CREATE & UPDATE: Kirim data form
+    orderForm.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const id = document.getElementById('orderId').value;
+      const btn = document.getElementById('submitBtn');
+      btn.disabled = true;
+      btn.textContent = 'Menyimpan...';
+
+      const payload = {
+        gameName: document.getElementById('gameName').value,
+        gameUserId: document.getElementById('gameUserId').value,
+        serverId: document.getElementById('serverId').value,
+        itemName: document.getElementById('itemName').value,
+        price: Number(document.getElementById('price').value),
+        paymentMethod: document.getElementById('paymentMethod').value,
+      };
+
+      if (id) {
+        payload.status = document.getElementById('status').value;
+      }
+
+      const url = id ? `${API_URL}/${id}` : API_URL;
+      const method = id ? 'PUT' : 'POST';
+
+      try {
+        const res = await fetch(url, {
+          method,
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload),
+        });
+
+        const result = await res.json();
+        if (!res.ok) {
+          showToast(`Gagal: ${result.message}`, 'error');
+        } else {
+          showToast(id ? '✅ Pesanan berhasil diperbarui!' : '✅ Pesanan berhasil dibuat!');
+          resetForm();
+          loadOrders();
+        }
+      } catch (err) {
+        showToast('Gagal terhubung ke server.', 'error');
+      } finally {
+        btn.disabled = false;
+        btn.textContent = id ? '💾 Perbarui Pesanan' : '💾 Simpan Pesanan';
+      }
+    });
+
+    // Masuk ke mode Edit
+    window.startEdit = (order) => {
+      document.getElementById('orderId').value = order._id;
+      document.getElementById('gameName').value = order.gameName;
+      document.getElementById('gameUserId').value = order.gameUserId;
+      document.getElementById('serverId').value = order.serverId || '';
+      document.getElementById('itemName').value = order.itemName;
+      document.getElementById('price').value = order.price;
+      document.getElementById('paymentMethod').value = order.paymentMethod;
+      document.getElementById('status').value = order.status;
+
+      document.getElementById('formTitle').textContent = `✏️ Edit Pesanan (${order.invoiceCode})`;
+      document.getElementById('submitBtn').textContent = '💾 Perbarui Pesanan';
+      document.getElementById('statusWrapper').classList.remove('hidden');
+      document.getElementById('cancelEditBtn').classList.remove('hidden');
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    };
+
+    // DELETE: Hapus data dari MongoDB
+    window.deleteOrder = async (id) => {
+      if (!confirm('Yakin ingin menghapus transaksi ini? Tindakan ini tidak bisa dibatalkan.')) return;
+      try {
+        const res = await fetch(`${API_URL}/${id}`, { method: 'DELETE' });
+        if (res.ok) {
+          showToast('🗑️ Transaksi berhasil dihapus.');
+          loadOrders();
+        } else {
+          showToast('Gagal menghapus transaksi.', 'error');
+        }
+      } catch {
+        showToast('Gagal terhubung ke server.', 'error');
+      }
+    };
+
+    function resetForm() {
+      orderForm.reset();
+      document.getElementById('orderId').value = '';
+      document.getElementById('formTitle').textContent = '✨ Buat Pesanan Top-Up Baru';
+      document.getElementById('submitBtn').textContent = '💾 Simpan Pesanan';
+      document.getElementById('statusWrapper').classList.add('hidden');
+      document.getElementById('cancelEditBtn').classList.add('hidden');
+    }
+
+    document.getElementById('cancelEditBtn').addEventListener('click', resetForm);
+    filterStatus.addEventListener('change', loadOrders);
+
+    let searchTimer;
+    searchInput.addEventListener('input', () => {
+      clearTimeout(searchTimer);
+      searchTimer = setTimeout(loadOrders, 400); // debounce 400ms
+    });
+
+    loadOrders();
+  </script>
+</body>
+</html>
