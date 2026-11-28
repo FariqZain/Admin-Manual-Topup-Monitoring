@@ -57,7 +57,17 @@ API pesanan tersedia di `/api/orders`:
 
 ## Pemecahan masalah
 
-- **`node` tidak dikenali**: tambahkan folder instalasi Node.js (umumnya `C:\Program Files\nodejs`) ke `PATH`, lalu tutup dan buka kembali terminal. Untuk terminal CMD saat ini, jalankan:
+- **`node` tidak dikenali atau muncul `exec: node: not found` di Git Bash**: error ini berarti `npm` ditemukan, tetapi Node.js belum ada di `PATH`. Jika Node.js terpasang di lokasi standar Windows, jalankan perintah berikut di Git Bash:
+
+  ```bash
+  export PATH="/c/Program Files/nodejs:$PATH"
+  node --version
+  npm --version
+  ```
+
+  Jika kedua perintah menampilkan versi, jalankan `npm install` lalu `npm start` dari folder proyek. Perintah `export` hanya berlaku untuk terminal saat ini. Agar permanen, tambahkan `C:\Program Files\nodejs` ke `Path` pada Windows Environment Variables, lalu buka ulang Git Bash. Jika Node.js tidak terpasang di lokasi tersebut, instal Node.js terlebih dahulu atau sesuaikan path di atas. Mengaktifkan lingkungan Python seperti `.venv` tidak menyediakan Node.js.
+
+- **`node` tidak dikenali di Command Prompt**: tambahkan folder instalasi Node.js (umumnya `C:\Program Files\nodejs`) ke `PATH`, lalu tutup dan buka kembali terminal. Untuk terminal CMD saat ini, jalankan:
 
   ```cmd
   set "PATH=C:\Program Files\nodejs;%PATH%"
